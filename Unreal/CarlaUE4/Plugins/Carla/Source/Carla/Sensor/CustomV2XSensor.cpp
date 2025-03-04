@@ -130,7 +130,13 @@ CustomV2XM_t ACustomV2XSensor::CreateCustomV2XMessage()
     CustomV2XM_t message = CustomV2XM_t();
 
     CreateITSPduHeader(message);
-    std::strcpy(message.message,mMessageData.c_str());
+    
+    // Use strncpy to limit the number of characters copied
+    std::strncpy(message.message, mMessageData.c_str(), sizeof(message.message) - 1);
+    
+    // Ensure null-termination
+    message.message[sizeof(message.message) - 1] = '\0';
+    
     mMessageDataChanged = false;
     return message;
 }
@@ -217,9 +223,14 @@ void ACustomV2XSensor::WriteMessageToV2XData(const ACustomV2XSensor::V2XDataList
 
 void ACustomV2XSensor::Send(const FString message)
 {
-    //note: this is unsafe! 
-    //should be fixed to limit length somewhere
     mMessageData = TCHAR_TO_UTF8(*message);
+    
+    constexpr size_t maxMessageSize = sizeof(CustomV2XM_t::message) - 1;
+    if (mMessageData.size() > maxMessageSize) 
+    {
+        UE_LOG(LogCarla, Warning, TEXT("CustomV2XSensor: message exceeds maximum size and will be truncated."));
+    }
+    
     mMessageDataChanged = true;
 }
 
